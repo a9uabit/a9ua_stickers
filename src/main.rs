@@ -3,7 +3,7 @@ mod data;
 
 use poise::{
     FrameworkError, FrameworkOptions, PrefixFrameworkOptions,
-    serenity_prelude::{ClientBuilder, GatewayIntents},
+    serenity_prelude::{ClientBuilder, GatewayIntents, UserId},
 };
 use serde::Deserialize;
 
@@ -12,10 +12,12 @@ use crate::data::DataFileManager;
 #[derive(Deserialize)]
 struct Config {
     token: String,
+    user_id: UserId,
 }
 
 struct Data {
     data_file_manager: DataFileManager,
+    user_id: UserId,
 }
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -29,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
     let config: Config = serde_json::from_str(&config)?;
 
     let framework_options = FrameworkOptions {
-        commands: vec![commands::ping()],
+        commands: vec![commands::ping(), commands::register_sticker(), commands::send_sticker()],
         on_error: |error| Box::pin(on_error(error)),
         prefix_options: PrefixFrameworkOptions {
             mention_as_prefix: false,
@@ -39,14 +41,18 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let data_file_manager = DataFileManager::new()?;
+    let user_id = config.user_id;
 
     let framework = poise::Framework::builder()
-        .setup(|ctx, ready, framework| {
+        .setup(move |ctx, ready, framework| {
             Box::pin(async move {
                 tracing::info!("logged in as {}", ready.user.tag());
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
-                Ok(Data { data_file_manager })
+                Ok(Data {
+                    data_file_manager,
+                    user_id,
+                })
             })
         })
         .options(framework_options)

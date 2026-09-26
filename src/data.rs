@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 use poise::serenity_prelude::StickerId;
 use serde::{Deserialize, Serialize};
 use slotmap::{SlotMap, new_key_type};
@@ -17,6 +17,9 @@ new_key_type! {
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct DataFile {
+    // it is not too verbose
+    // or rather, it is optimized because it uses to detect duplications
+    pub stickers_set: HashSet<StickerId>,
     pub stickers: SlotMap<StickerKey, Sticker>,
 }
 
