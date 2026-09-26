@@ -2,7 +2,7 @@ use poise::{
     CreateReply,
     serenity_prelude::{CreateAutocompleteResponse, CreateMessage, StickerId},
 };
-use slotmap::KeyData;
+use slotmap::{Key, KeyData};
 
 use crate::{
     Context, Error,
@@ -35,12 +35,11 @@ async fn stickers(ctx: Context<'_>, partial: &str) -> CreateAutocompleteResponse
         return response;
     };
 
-    for (name, id) in stickers
+    for sticker in stickers
         .iter()
-        .map(|sticker| (sticker.name.clone(), sticker.id.to_string()))
-        .filter(|(name, _)| name.contains(partial))
+        .filter(|sticker| sticker.name.contains(partial))
     {
-        response = response.add_string_choice(name, id);
+        response = response.add_string_choice(sticker.name.clone(), sticker.id.to_string());
     }
 
     response
@@ -123,11 +122,44 @@ pub async fn register_sticker(
     Ok(())
 }
 
+async fn sticker_keys(ctx: Context<'_>, partial: &str) -> CreateAutocompleteResponse {
+    let mut response = CreateAutocompleteResponse::new();
+
+    let data = ctx.data();
+
+    let stickers = match data
+        .data_file_manager
+        .data(|data| data.stickers.clone())
+        .await
+    {
+        Ok(stickers) => stickers,
+        Err(error) => {
+            tracing::error!("{:?}", error);
+
+            response =
+                response.add_string_choice("エラーが発生しました(`コンソールをご覧ください`)", "");
+
+            return response;
+        }
+    };
+
+    for (key, sticker) in stickers
+        .iter()
+        .filter(|(_, sticker)| sticker.name.contains(partial))
+    {
+        response =
+            response.add_string_choice(sticker.name.clone(), key.data().as_ffi().to_string());
+    }
+
+    response
+}
+
 /// スタンプを送信します
 #[poise::command(slash_command)]
 pub async fn send_sticker(
     ctx: Context<'_>,
     #[description = "スタンプを選択"]
+    #[autocomplete = "sticker_keys"]
     #[rename = "sticker"]
     sticker_key_id: String,
 ) -> Result<(), Error> {

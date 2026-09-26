@@ -23,7 +23,7 @@ pub struct DataFile {
     pub stickers: SlotMap<StickerKey, Sticker>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Sticker {
     pub name: String,
     pub id: StickerId,
