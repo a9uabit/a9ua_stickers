@@ -1,6 +1,7 @@
+use anyhow::anyhow;
 use poise::{
     CreateReply,
-    serenity_prelude::{CreateMessage, StickerId},
+    serenity_prelude::{AutocompleteOption, CreateAutocompleteResponse, CreateMessage, StickerId},
 };
 use slotmap::KeyData;
 
@@ -20,11 +21,33 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+async fn stickers(ctx: Context<'_>, partial: &str) -> CreateAutocompleteResponse {
+    let mut response = CreateAutocompleteResponse::new();
+
+    let Some(guild) = ctx.guild() else {
+        response = response.add_string_choice("エラーが発生しました(`can't get guild`)", "");
+
+        return response;
+    };
+
+    for (name, id) in guild
+        .stickers
+        .iter()
+        .map(|(&id, sticker)| (sticker.name.clone(), id.to_string()))
+        .filter(|(name, _)| name.contains(partial))
+    {
+        response = response.add_string_choice(name, id);
+    }
+
+    response
+}
+
 /// スタンプを登録します
 #[poise::command(slash_command)]
 pub async fn register_sticker(
     ctx: Context<'_>,
     #[description = "追加するスタンプ"]
+    #[autocomplete = "stickers"]
     #[rename = "sticker"]
     sticker_id: String,
 ) -> Result<(), Error> {
