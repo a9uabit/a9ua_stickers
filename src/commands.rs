@@ -191,5 +191,11 @@ pub async fn send_sticker(
         .send_message(ctx, CreateMessage::new().sticker_id(sticker_id))
         .await?;
 
+    let handle = ctx
+        .send(CreateReply::new().ephemeral(true).content("ok"))
+        .await?;
+
+    handle.delete(ctx).await?;
+
     Ok(())
 }
