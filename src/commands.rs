@@ -113,7 +113,12 @@ pub async fn register_sticker(
         )
         .await?;
         ctx.channel_id()
-            .send_message(ctx, CreateMessage::new().content("↓プレビュー").sticker_id(sticker_id))
+            .send_message(
+                ctx,
+                CreateMessage::new()
+                    .content("↓プレビュー")
+                    .sticker_id(sticker_id),
+            )
             .await?;
     } else {
         ctx.say("スタンプは既に追加されています").await?;
