@@ -26,8 +26,14 @@ pub async fn register_sticker(
     ctx: Context<'_>,
     #[description = "追加するスタンプ"]
     #[rename = "sticker"]
-    sticker_id: u64,
+    sticker_id: String,
 ) -> Result<(), Error> {
+    let Ok(sticker_id) = sticker_id.parse::<u64>() else {
+        ctx.say("数字で入力してください").await?;
+
+        return Ok(());
+    };
+
     let sticker_id = StickerId::from(sticker_id);
 
     let data = ctx.data();
@@ -83,6 +89,8 @@ pub async fn register_sticker(
         ctx.channel_id()
             .send_message(ctx, CreateMessage::new().sticker_id(sticker_id))
             .await?;
+    } else {
+        ctx.say("スタンプは既に追加されています").await?;
     }
 
     Ok(())
