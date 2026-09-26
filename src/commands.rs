@@ -124,8 +124,14 @@ pub async fn send_sticker(
     ctx: Context<'_>,
     #[description = "スタンプを選択"]
     #[rename = "sticker"]
-    sticker_key_id: u64,
+    sticker_key_id: String,
 ) -> Result<(), Error> {
+    let Ok(sticker_key_id) = sticker_key_id.parse::<u64>() else {
+        ctx.say("数字で入力してください").await?;
+
+        return Ok(());
+    };
+
     let data_file_manager = &ctx.data().data_file_manager;
     let key = StickerKey::from(KeyData::from_ffi(sticker_key_id));
 
