@@ -1,7 +1,6 @@
-use anyhow::anyhow;
 use poise::{
     CreateReply,
-    serenity_prelude::{AutocompleteOption, CreateAutocompleteResponse, CreateMessage, StickerId},
+    serenity_prelude::{CreateAutocompleteResponse, CreateMessage, StickerId},
 };
 use slotmap::KeyData;
 
