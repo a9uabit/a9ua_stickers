@@ -23,16 +23,21 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 async fn stickers(ctx: Context<'_>, partial: &str) -> CreateAutocompleteResponse {
     let mut response = CreateAutocompleteResponse::new();
 
-    let Some(guild) = ctx.guild() else {
+    let Some(guild_id) = ctx.guild_id() else {
         response = response.add_string_choice("エラーが発生しました(`can't get guild`)", "");
 
         return response;
     };
 
-    for (name, id) in guild
-        .stickers
+    let Ok(stickers) = guild_id.stickers(ctx).await else {
+        response = response.add_string_choice("エラーが発生しました(`can't get stickers`)", "");
+
+        return response;
+    };
+
+    for (name, id) in stickers
         .iter()
-        .map(|(&id, sticker)| (sticker.name.clone(), id.to_string()))
+        .map(|sticker| (sticker.name.clone(), sticker.id.to_string()))
         .filter(|(name, _)| name.contains(partial))
     {
         response = response.add_string_choice(name, id);
@@ -109,7 +114,7 @@ pub async fn register_sticker(
         )
         .await?;
         ctx.channel_id()
-            .send_message(ctx, CreateMessage::new().sticker_id(sticker_id))
+            .send_message(ctx, CreateMessage::new().content("↓プレビュー").sticker_id(sticker_id))
             .await?;
     } else {
         ctx.say("スタンプは既に追加されています").await?;
