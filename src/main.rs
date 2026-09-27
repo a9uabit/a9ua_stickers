@@ -1,5 +1,6 @@
 mod commands;
 mod data;
+mod guild_data;
 
 use poise::{
     FrameworkError, FrameworkOptions, PrefixFrameworkOptions,
@@ -40,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let data_file_manager = DataFileManager::new()?;
+    let data_file_manager = DataFileManager::default();
     let user_id = config.user_id;
 
     let framework = poise::Framework::builder()

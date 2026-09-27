@@ -6,6 +6,7 @@ use tokio::sync::{Mutex, RwLock};
 
 const FILE_PATH: &str = "./data.json";
 
+#[derive(Default)]
 pub struct DataFileManager {
     cached_file: RwLock<Option<Arc<RwLock<DataFile>>>>,
     load_locks: Arc<Mutex<()>>,
@@ -30,13 +31,6 @@ pub struct Sticker {
 }
 
 impl DataFileManager {
-    pub fn new() -> std::io::Result<Self> {
-        Ok(Self {
-            cached_file: Default::default(),
-            load_locks: Default::default(),
-        })
-    }
-
     async fn load_data(&self) -> std::io::Result<Arc<RwLock<DataFile>>> {
         let load_lock = Arc::clone(&self.load_locks);
 
