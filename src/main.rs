@@ -8,7 +8,7 @@ use poise::{
 };
 use serde::Deserialize;
 
-use crate::data::DataFileManager;
+use crate::{data::DataFileManager, guild_data::GuildDataFileManager};
 
 #[derive(Deserialize)]
 struct Config {
@@ -18,6 +18,7 @@ struct Config {
 
 struct Data {
     data_file_manager: DataFileManager,
+    guild_data_file_manager: GuildDataFileManager,
     user_id: UserId,
 }
 
@@ -42,6 +43,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let data_file_manager = DataFileManager::default();
+    let guild_data_file_manager = GuildDataFileManager::new().await?;
     let user_id = config.user_id;
 
     let framework = poise::Framework::builder()
@@ -52,6 +54,7 @@ async fn main() -> anyhow::Result<()> {
 
                 Ok(Data {
                     data_file_manager,
+                    guild_data_file_manager,
                     user_id,
                 })
             })

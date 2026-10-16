@@ -1,12 +1,18 @@
+use anyhow::anyhow;
 use poise::{
     CreateReply,
-    serenity_prelude::{CreateAutocompleteResponse, CreateMessage, StickerId},
+    serenity_prelude::{
+        ChannelId, CreateAutocompleteResponse, CreateMessage, ExecuteWebhook, GuildId, StickerId,
+        Webhook,
+    },
 };
+use serde_json::json;
 use slotmap::{Key, KeyData};
 
 use crate::{
     Context, Error,
     data::{Sticker, StickerKey},
+    guild_data::GuildDataFileManager,
 };
 
 #[poise::command(slash_command)]
@@ -174,6 +180,7 @@ pub async fn send_sticker(
         return Ok(());
     };
 
+    let guild_data_file_manager = &ctx.data().guild_data_file_manager;
     let data_file_manager = &ctx.data().data_file_manager;
     let key = StickerKey::from(KeyData::from_ffi(sticker_key_id));
 
@@ -192,9 +199,85 @@ pub async fn send_sticker(
         return Ok(());
     };
 
-    ctx.channel_id()
-        .send_message(ctx, CreateMessage::new().sticker_id(sticker_id))
+    let guild_id = ctx.guild_id().ok_or(anyhow!("can't get guild id"))?;
+    let channel_id = ctx.channel_id();
+
+    let webhook = {
+        async fn create_webhook(
+            ctx: &Context<'_>,
+            guild_data_file_manager: &GuildDataFileManager,
+            guild_id: GuildId,
+            channel_id: ChannelId,
+        ) -> Result<Webhook, Error> {
+            ctx.defer().await?;
+
+            let bot_name = {
+                let user = ctx.cache().current_user();
+                user.display_name().to_owned()
+            };
+
+            let map = json!({
+                "name": bot_name,
+            });
+
+            let webhook = ctx.http().create_webhook(channel_id, &map, None).await?;
+
+            guild_data_file_manager
+                .data_mut(guild_id, |data| {
+                    data.webhooks.insert(channel_id, webhook.id)
+                })
+                .await?;
+
+            Ok(webhook)
+        }
+
+        let webhook_id = guild_data_file_manager
+            .data(guild_id, |data| data.webhooks.get(&channel_id).copied())
+            .await?;
+        if let Some(webhook_id) = webhook_id {
+            match webhook_id.to_webhook(ctx).await {
+                Ok(webhook) => webhook,
+                Err(_) => {
+                    create_webhook(&ctx, guild_data_file_manager, guild_id, channel_id).await?
+                }
+            }
+        } else {
+            create_webhook(&ctx, guild_data_file_manager, guild_id, channel_id).await?
+        }
+    };
+
+    let Ok(sticker) = sticker_id.to_sticker(ctx).await else {
+        ctx.send(
+            CreateReply::new()
+                .ephemeral(true)
+                .content("スタンプが見つかりません"),
+        )
         .await?;
+
+        return Ok(());
+    };
+
+    let Some(sticker_url) = sticker.image_url() else {
+        ctx.send(
+            CreateReply::new()
+                .ephemeral(true)
+                .content("不明なスタンプのタイプです"),
+        )
+        .await?;
+
+        return Ok(());
+    };
+
+    let author = ctx.author();
+    let mut execute_webhook = ExecuteWebhook::new()
+        .username(author.display_name())
+        .content(format!("[{}]({})", sticker.name, sticker_url));
+
+    if let Some(avatar_url) = author.avatar_url() {
+        execute_webhook = execute_webhook.avatar_url(avatar_url);
+    }
+
+    webhook.execute(ctx, false, execute_webhook).await?;
 
     let handle = ctx
         .send(CreateReply::new().ephemeral(true).content("ok"))
