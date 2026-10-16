@@ -24,7 +24,7 @@ async fn stickers(ctx: Context<'_>, partial: &str) -> CreateAutocompleteResponse
     let mut response = CreateAutocompleteResponse::new();
 
     let Some(guild_id) = ctx.guild_id() else {
-        response = response.add_string_choice("エラーが発生しました(`can't get guild`)", "");
+        response = response.add_string_choice("エラーが発生しました(`can't get guild id`)", "");
 
         return response;
     };
